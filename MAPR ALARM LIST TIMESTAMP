@@ -1,0 +1,17 @@
+To find the maprcli alarm list TIMESTAMP in human readable format
+
+1. Remove the last 3 digits 
+2. use command $ date -d @<truncated timestamp>
+
+For Ex : 
+
+1568229435407                      1            Number of files has exceeded configured threshold. Number of files 417255131, threshold: 50000000. Size of namespace container has exceeded configured threshold. Namespace container size: 9111107 MB, threshold: 512000 MB.                   cldb.alarm.group.warn   VOLUME_ALARM_INODES_EXCEEDED        opsistg1
+
+Epoch Timestamp : 1568229435407
+Truncated Timestamp : 1568229435
+
+Converted Human readable timestamp (Only valid for RHEL and CentOS)
+
+[root@ajay60 ~]# date -d @1568229435
+Wed Sep 11 12:17:15 PDT 2019
+
