@@ -1,0 +1,158 @@
+Below are the STEPS to enable Audit on specific volume and specific directory :
+
+
+1. Check if Audit feature is enabled on the cluster or not
+
+
+$ maprcli config load -json | grep "mfs.feature.audit.support"
+>> this should show this property value as 1
+
+
+1. If not enabled enable using, below command : (No restart is required)
+$ maprcli config save -values {"mfs.feature.audit.support":"1"}
+
+
+
+1. Enable the cluster data audit
+$ maprcli audit data -enabled true
+
+
+
+To check :
+$ maprcli audit info -json
+{
+"timestamp":1581465809792,
+"timeofday":"2020-02-11 07:03:29.792 GMT-0500 PM",
+"status":"OK",
+"total":1,
+"data":[
+{
+"data":{
+"enabled":"1",
+"maxSizeGB":"32",
+"retentionDays":"3"
+},
+"cluster":{
+"enabled":"0",
+"maxSizeGB":"NA",
+"retentionDays":"NA"
+}
+}
+]
+}
+
+
+
+1. Check volume audit enabled for a particular volume : (Note that the value :1 means enabled)
+
+$ maprcli volume info -name <volume name> -json | grep -i "audited\|coalesce"
+
+Sample O/P
+
+
+$ maprcli volume info -name test-volume -json | grep -i "audited\|coalesce"
+"audited":1,
+"coalesceInterval":60,
+
+
+1. To enable use this command : $ maprcli volume audit -name <volume name> -enabled true
+
+
+
+1. Turn the auditing on the specific directory
+
+
+
+To check if Auditing is ON or not on specific directory : (In the below highlighted output U denotes Audit is not enabled on the directory/volume)
+
+
+
+For Ex:
+
+$ hadoop mfs -ls /var/mapr/cluster/
+
+vrwxr-xr-x Z U U U 3 mapr mapr 1 2020-02-03 18:02 268435456 /var/mapr/cluster/yarn
+
+p mapr.resourcemanager.volume default 2049.49.131264 -> 2057.16.2 vm75-164.support.mapr.com:5660
+
+
+
+To turn it ON use this command :
+
+
+
+For Ex: $ hadoop mfs -setaudit on /var/mapr/cluster/yarn
+
+
+
+Check Again. You should see A as below :
+
+
+
+$ hadoop mfs -ls /var/mapr/cluster/
+
+
+
+vrwxr-xr-x Z U A U 3 mapr mapr 1 2020-02-03 18:02 268435456 /var/mapr/cluster/yarn
+
+p mapr.resourcemanager.volume default 2049.49.131264 -> 2057.16.2 vm75-164.support.mapr.com:5660
+
+
+
+1. Once all this steps are done test it by creating test files and deleting,change owndership etc.
+2. The Audit logs should be populated on MAPR-FS on path as shown below :
+
+
+
+# hadoop fs -ls /var/mapr/local/vm75-164.support.mapr.com/audit/5660 | grep FSAudit
+
+
+
+-rw------- 2 mapr mapr 30457 2020-02-11 19:08 /var/mapr/local/vm75-164.support.mapr.com/audit/5660/FSAudit.log-2020-02-12-001.json
+
+
+
+Contents of above file will look like
+
+
+
+# tail -n 50 FSAudit.log-2020-02-12-001.json
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.775Z"},"operation":"READ","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.113.393922","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.775Z"},"operation":"READ","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.113.393922","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.810Z"},"operation":"WRITE","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.131.393938","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.811Z"},"operation":"WRITE","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.131.393938","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.811Z"},"operation":"CHPERM","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.131.393938","permissions":"0774","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.812Z"},"operation":"LOOKUP","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.77.131268","srcName":"job_1581461916441_0001.summary","volumeId":96866802,"status":2}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.813Z"},"operation":"RENAME","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.77.131268","dstFid":"2057.77.131268","srcName":"job_1581461916441_0001.summary_tmp","dstName":"job_1581461916441_0001.summary","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.814Z"},"operation":"LOOKUP","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.77.131268","srcName":"job_1581461916441_0001_conf.xml","volumeId":96866802,"status":2}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.814Z"},"operation":"RENAME","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.77.131268","dstFid":"2057.77.131268","srcName":"job_1581461916441_0001_conf.xml_tmp","dstName":"job_1581461916441_0001_conf.xml","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.815Z"},"operation":"LOOKUP","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.77.131268","srcName":"job_1581461916441_0001-1581465893411-mapr-QuasiMonteCarlo-1581465947736-50-1-SUCCEEDED-root.mapr-1581465900641.jhist","volumeId":96866802,"status":2}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.816Z"},"operation":"RENAME","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.77.131268","dstFid":"2057.77.131268","srcName":"job_1581461916441_0001-1581465893411-mapr-QuasiMonteCarlo-1581465947736-50-1-SUCCEEDED-root.mapr-1581465900641.jhist_tmp","dstName":"job_1581461916441_0001-1581465893411-mapr-QuasiMonteCarlo-1581465947736-50-1-SUCCEEDED-root.mapr-1581465900641.jhist","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.839Z"},"operation":"LOOKUP","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.106.393914","srcName":"appattempt_1581461916441_0001_000001.new.tmp","volumeId":96866802,"status":2}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.841Z"},"operation":"CREATE","uid":5000,"ipAddress":"10.10.75.164","parentFid":"2057.106.393914","childFid":"2057.133.393942","childName":"appattempt_1581461916441_0001_000001.new.tmp","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.841Z"},"operation":"WRITE","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.133.393942","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.844Z"},"operation":"LOOKUP","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.106.393914","srcName":"appattempt_1581461916441_0001_000001.new","volumeId":96866802,"status":2}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.844Z"},"operation":"RENAME","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.106.393914","dstFid":"2057.106.393914","srcName":"appattempt_1581461916441_0001_000001.new.tmp","dstName":"appattempt_1581461916441_0001_000001.new","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.846Z"},"operation":"DELETE","uid":5000,"ipAddress":"10.10.75.164","parentFid":"2057.106.393914","childFid":"2057.111.393918","childName":"appattempt_1581461916441_0001_000001","volumeId":96866802,"status":0}
+
+{"timestamp":{"$date":"2020-02-12T00:05:47.847Z"},"operation":"LOOKUP","uid":5000,"ipAddress":"10.10.75.164","srcFid":"2057.106.393914","srcName":"appattempt_1581461916441_0001_000001","volumeId":96866802,"status":2}
+
+
+
